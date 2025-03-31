@@ -1,0 +1,73 @@
+// app.js
+
+// Import required libraries
+const express = require('express');
+const openai = require('openai');
+const stripe = require('stripe');
+
+// Initialize Express app
+const app = express();
+
+// Set up middleware to parse JSON and URL-encoded data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Set the view engine to EJS for templating
+app.set('view engine', 'ejs');
+
+// Initialize OpenAI API
+openai.apiKey = 'YOUR_OPENAI_API_KEY';
+
+// Initialize Stripe API
+const stripeSecretKey = 'YOUR_STRIPE_API_KEY';
+const stripeInstance = stripe(stripeSecretKey);
+
+// Define a function to generate website content using the OpenAI API
+async function generateContent(businessName, businessDescription, businessServices) {
+    const prompt = `Generate a website content for a ${businessName} that provides ${businessServices}. The business is described as ${businessDescription}.`;
+    const response = await openai.createCompletion({
+        engine: 'text-davinci-002',
+        prompt: prompt,
+        maxTokens: 1024,
+        n: 1,
+        stop: null,
+        temperature: 0.7,
+    });
+    return response.data.choices[0].text;
+}
+
+// Route to render the form page
+app.get('/form', (req, res) => {
+    res.render('form');
+});
+
+// Route for form submission to generate website content
+app.post('/form', async (req, res) => {
+    const businessName = req.body.businessName;
+    const businessDescription = req.body.businessDescription;
+    const businessServices = req.body.businessServices;
+
+    // Generate website content using the OpenAI API
+    const content = await generateContent(businessName, businessDescription, businessServices);
+
+    // Render the website template with the generated content
+    res.render('website', { businessName, content });
+});
+
+// Route for payment processing (placeholder)
+app.post('/payment', async (req, res) => {
+    res.render('payment');
+});
+
+// Optional: Routes for payment outcomes (if integrating Stripe Checkout)
+app.get('/success', (req, res) => {
+    res.send("Payment successful. Thank you!");
+});
+app.get('/cancel', (req, res) => {
+    res.send("Payment cancelled. Please try again.");
+});
+
+// Start the Express server
+const port = 3000;
+app.listen(port, () => {
+    console.log(`Express server started on port ${port}`);
